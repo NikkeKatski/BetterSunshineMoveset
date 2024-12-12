@@ -33,7 +33,6 @@ extern void checkForWaterPound(TMario *, bool);
 extern bool processWaterPound(TMario *);
 
 extern u32 MultiJumpState;
-extern void checkStartInAir(TMario *player);
 extern void checkForMultiJump(TMario *, bool);
 extern bool processMultiJump(TMario *);
 
@@ -79,7 +78,6 @@ static void initModule() {
     Player::addInitCallback(onPlayerInit);
     // Player::addUpdateCallback("_moveset_update", onPlayerUpdate);
     Player::addInitCallback(initFastTurbo);
-    Player::addLoadAfterCallback(checkStartInAir);
     Player::addUpdateCallback(updateTurboContext);
     Player::addUpdateCallback(checkSpamHover);
     Player::addUpdateCallback(checkRocketNozzleDiveBlast);

@@ -1,38 +1,16 @@
 #include <Dolphin/types.h>
-#include <SMS/Map/MapCollisionData.hxx>
 #include <SMS/Player/Mario.hxx>
+
 #include <SMS/raw_fn.hxx>
 
 #include <BetterSMS/module.hxx>
 #include <BetterSMS/player.hxx>
 
 #include "player.hxx"
-#include <BetterSMS/libs/constmath.hxx>
 
 using namespace BetterSMS;
 
 u32 MultiJumpState = 0xF00001C1;
-extern u32 PoundJumpState;
-
-BETTER_SMS_FOR_CALLBACK void checkStartInAir(TMario *player) {
-    const TBGCheckData *floor = nullptr;
-    f32 groundY               = gpMapCollisionData->checkGround(
-        player->mTranslation.x, player->mTranslation.y + 80.0f, player->mTranslation.z, 0, &floor);
-
-    if (fabsf(player->mTranslation.y - groundY) <= 10.0f) {
-        return;
-    }
-
-    auto *playerData = getPlayerMovementData(player);
-    if (!playerData)
-        return;
-
-    auto *params = getPlayerMovementParams(player);
-    if (!params)
-        return;
-
-    playerData->mCurJump = params->mMaxJumps.get();
-}
 
 BETTER_SMS_FOR_CALLBACK void checkForMultiJump(TMario *player, bool isMario) {
     auto *playerData = getPlayerMovementData(player);
@@ -44,29 +22,16 @@ BETTER_SMS_FOR_CALLBACK void checkForMultiJump(TMario *player, bool isMario) {
         return;
 
     const bool isYoshi = player->mYoshi ? player->mYoshi->mState == TYoshi::MOUNTED : false;
-
     const bool isAirBorn =
         ((player->mState & TMario::STATE_AIRBORN) && (player->mActionState & 0x4)) ||
         (!(player->mState & TMario::STATE_WATERBORN) &&
          (player->mTranslation.y > player->mFloorBelow + 10));
-
     const bool isInvalidState =
-        isYoshi || player->mState == 0x1337 || (player->mState & 0x800000) ||
-        player->mState == TMario::STATE_SLIP_JUMP || player->mState == TMario::STATE_THROWN ||
-        player->mAttributes.mIsGameOver || player->mState == PoundJumpState;
+        (player->mState & 0x800000) || isYoshi || player->mState == TMario::STATE_SLIP_JUMP ||
+        player->mState == TMario::STATE_THROWN || player->mAttributes.mIsGameOver;
 
-    bool isRopeState =
-        (player->mState == 0x350 || player->mState == 0x351 || player->mState == 0x352 ||
-         player->mState == 0x353 || player->mState == 0x35B || player->mState == 0x35C ||
-         player->mState == 0x10000357 || player->mState == 0x10000358);
-    bool isClimbState = (player->mState == 0x10100341);                          // Pole Climb
-    isClimbState |= (player->mState & 0x30000000) != 0;                          // Ladder climbs
-    isClimbState |= (player->mState == 0x200349 || player->mState == 0x20054A);  // Roof climbs;
-
-    if (isInvalidState || isClimbState || isRopeState) {
-        playerData->mCurJump = 1;
+    if (isInvalidState)
         return;
-    }
 
     if (!isAirBorn) {
         playerData->mCurJump = 1;
@@ -82,7 +47,6 @@ BETTER_SMS_FOR_CALLBACK void checkForMultiJump(TMario *player, bool isMario) {
     if ((player->mController->mButtons.mFrameInput & TMarioGamePad::EButtons::A) && jumpsLeft > 0 &&
         player->mState != TMario::STATE_WALLSLIDE && player->mState != TMario::STATE_F_KNCK_H) {
         player->changePlayerStatus(MultiJumpState, 0, false);
-        playerData->mLastDropY = player->mTranslation.y;
     }
 }
 
@@ -113,10 +77,9 @@ BETTER_SMS_FOR_CALLBACK bool processMultiJump(TMario *player) {
     const f32 stickMagnitude        = controller->mControlStick.mLengthFromNeutral;
 
     if (stickMagnitude > 0.1f) {
-        player->mAngle.y =
-            gpCamera->mHorizontalAngle +
-            convertAngleFloatToS16(radiansToAngle(
-                atan2f(controller->mControlStick.mStickX, -controller->mControlStick.mStickY)));
+        Player::rotateRelativeToCamera(
+            player, gpCamera,
+            {controller->mControlStick.mStickX, controller->mControlStick.mStickY}, 1.0f);
     }
 
     playerData->mIsLongJumping = false;

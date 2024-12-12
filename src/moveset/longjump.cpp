@@ -17,10 +17,6 @@ using namespace BetterSMS;
 f32 calcJumpPower(TMario *player, f32 factor, f32 base, f32 jumpPower) {
     base = Min(base, 100.0f);
 
-    if (player->_388 != 0) {
-        return Max(base, (base * factor) + jumpPower);
-    }
-
     auto *moveData = getPlayerMovementData(player);
     if (!moveData)
         return Max(base, (base * factor) + jumpPower);
@@ -52,7 +48,7 @@ static void setJumpOrLongJump(TMario *player, u32 state, u32 unk_0) {
     auto *moveData           = getPlayerMovementData(player);
     moveData->mIsLongJumping = false;
 
-    if (!moveData || player->_388 != 0) {
+    if (!moveData) {
         player->setStatusToJumping(state, unk_0);
         return;
     }
@@ -68,21 +64,10 @@ static void setJumpOrLongJump(TMario *player, u32 state, u32 unk_0) {
         return;
     }
 
-    if (player->mTranslation.y - player->mFloorBelow > 10.0f) {
-        player->setStatusToJumping(state, unk_0);
-        return;
-    }
-
     if ((player->mState & TMario::STATE_AIRBORN) != 0 ||
         (player->mState & TMario::STATE_WATERBORN) != 0 ||
         player->mState == TMario::STATE_DIVESLIDE || player->onYoshi() ||
-        player->mState == 0x80000588 || player->mState == 0x820008AB ||
         player->mState == 0xF00001C1) /* Multi jump */ {
-        player->setStatusToJumping(state, unk_0);
-        return;
-    }
-
-    if (player->mState == 0x810446) /* Blooper */ {
         player->setStatusToJumping(state, unk_0);
         return;
     }
@@ -130,7 +115,7 @@ static void processJumpOrLongJump() {
     constexpr f32 LongJumpSpeedUp      = 50.0f;
 
     auto *moveData = getPlayerMovementData(player);
-    if (!moveData || player->_388 != 0) {
+    if (!moveData) {
         player->mSpeed.y = calcJumpPower(player, 0.25f, player->mForwardSpeed, 42.0f);
         return;
     }

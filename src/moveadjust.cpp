@@ -15,9 +15,7 @@
 using namespace BetterSMS;
 
 static void addVelocity(TMario *player, f32 velocity) {
-    auto *playerData = Player::getData(player);
-
-    if (!gFastDiveSetting.getBool() || !playerData->isMario() || player->_388 != 0) {
+    if (!gFastDiveSetting.getBool()) {
         player->mForwardSpeed = Min(player->mForwardSpeed + velocity, 99.0f);
         return;
     }
@@ -30,27 +28,21 @@ static f32 checkGroundSpeedLimit() {
     TMario *player;
     SMS_FROM_GPR(31, player);
 
-    if (player->_388 != 0) {
+    auto *data = getPlayerMovementData(player);
+    if (!data)
         return 1.0f;
-    }
-
-    auto *playerData = Player::getData(player);
-
-    bool isOnYoshi = player->onYoshi();
-    if (isOnYoshi) {
-        return player->mYoshiParams.mRunYoshiMult.get();
-    }
 
     auto *params = getPlayerMovementParams(player);
-    if (!params) {
+    if (!params)
         return 1.0f;
-    }
 
-    if (playerData->isMario()) {
-        return params->mSpeedMultiplier.get();
+    f32 multiplier = 1.0f;
+    if (player->onYoshi()) {
+        multiplier *= player->mYoshiParams.mRunYoshiMult.get();
+    } else {
+        multiplier *= params->mSpeedMultiplier.get();
     }
-
-    return 1.0f;
+    return multiplier;
 }
 SMS_WRITE_32(SMS_PORT_REGION(0x8025B8BC, 0x80253648, 0, 0), 0x60000000);
 SMS_PATCH_BL(SMS_PORT_REGION(0x8025B8C0, 0x8025364C, 0, 0), checkGroundSpeedLimit);
@@ -64,10 +56,6 @@ static f32 checkSlideSpeedMulti() {
     constexpr f32 rocketMultiplier = 1.8f;
     constexpr f32 hoverMultiplier  = 1.2f;
     constexpr f32 brakeRate        = 0.005f;
-
-    if (player->_388 != 0) {
-        return speedCap;
-    }
 
     auto *data = getPlayerMovementData(player);
     if (!data)
@@ -93,8 +81,8 @@ static f32 checkSlideSpeedMulti() {
         data->mSlideSpeedMultiplier = Max(data->mSlideSpeedMultiplier - brakeRate, 1.0f);
     }
 
-    if (!player->onYoshi() && player->isMario()) {
-        return speedCap * params->mSlideMultiplier.get() * data->mSlideSpeedMultiplier;
+    if (!player->onYoshi()) {
+        return speedCap * params->mSlideMultiplier.get();
     } else {
         return speedCap;
     }
@@ -131,16 +119,20 @@ static void checkJumpSpeedLimit(f32 speed) {
     TMario *player;
     SMS_FROM_GPR(31, player);
 
+    auto *data = getPlayerMovementData(player);
+    if (!data)
+        return;
+
+    auto *params = getPlayerMovementParams(player);
+    if (!params)
+        return;
+
     f32 speedCap     = 32.0f;
     f32 speedReducer = 0.2f;
 
-    auto *playerData = Player::getData(player);
-
-    if (auto *params = getPlayerMovementParams(player)) {
-        if (!player->onYoshi() && playerData->isMario() && player->_388 == 0) {
-            speedCap *= params->mSpeedMultiplier.get();
-            speedReducer *= scaleLinearAtAnchor<f32>(params->mSpeedMultiplier.get(), 3.0f, 1.0f);
-        }
+    if (!player->onYoshi()) {
+        speedCap *= params->mSpeedMultiplier.get();
+        speedReducer *= scaleLinearAtAnchor<f32>(params->mSpeedMultiplier.get(), 3.0f, 1.0f);
     }
 
     if (speed > speedCap) {
@@ -158,22 +150,13 @@ SMS_PATCH_BL(SMS_PORT_REGION(0x8024CC6C, 0x802449F8, 0, 0), checkJumpSpeedLimit)
 static TMario *checkJumpSpeedMulti(TMario *player, f32 factor, f32 max) {
     auto *playerData = Player::getData(player);
 
-    if (player->_388 != 0) {
-        player->mForwardSpeed = (factor * max) + player->mForwardSpeed;
-        return player;
-    }
-
     auto *data = getPlayerMovementData(player);
-    if (!data) {
-        player->mForwardSpeed = (factor * max) + player->mForwardSpeed;
+    if (!data)
         return player;
-    }
 
     auto *params = getPlayerMovementParams(player);
-    if (!params) {
-        player->mForwardSpeed = (factor * max) + player->mForwardSpeed;
+    if (!params)
         return player;
-    }
 
     if (playerData->isMario() && !player->onYoshi()) {
         player->mForwardSpeed =

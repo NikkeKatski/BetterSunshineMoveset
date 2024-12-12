@@ -25,10 +25,6 @@ BETTER_SMS_FOR_CALLBACK void onPlayerInit(TMario *player, bool isMario) {
     }
     Player::registerData(player, "_movement_params", params);
 
-    if (!isMario || player->_388 != 0) {
-        return;
-    }
-
     f32 speedMultiplier   = params->mSpeedMultiplier.get();
     f32 jumpMultiplier    = params->mBaseJumpMultiplier.get();
     f32 gravityMultiplier = params->mGravityMultiplier.get();

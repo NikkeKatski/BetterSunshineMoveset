@@ -8,7 +8,6 @@
 #include "player.hxx"
 #include <BetterSMS/module.hxx>
 #include <BetterSMS/player.hxx>
-#include <BetterSMS/settings.hxx>
 
 using namespace BetterSMS;
 
@@ -46,26 +45,18 @@ BETTER_SMS_FOR_CALLBACK void checkSpamHover(TMario *player, bool isMario) {
     bool isTouchGround4cm = player->mTranslation.y - player->mFloorBelow <= 4.0f;
     bool isWalkingRope =
         (player->mState == 0x350 || player->mState == 0x10000357 || player->mState == 0x10000358);
-    bool isClimbState = (player->mState == 0x10100341);                          // Pole Climb
-    isClimbState |= (player->mState & 0x30000000) != 0;                          // Ladder climbs
-    isClimbState |= (player->mState == 0x200349 || player->mState == 0x20054A);  // Roof climbs;
 
-    bool isValidResetState = isTouchGround4cm || isClimbState || (player->mState & TMario::STATE_WATERBORN) ||
+    bool isValidResetState = isTouchGround4cm || (player->mState & TMario::STATE_WATERBORN) ||
                              (player->mState == TMario::STATE_NPC_BOUNCE) || isWalkingRope;
-
+                             
     PlayerMovementData *moveData = getPlayerMovementData(player);
     if (isValidResetState)
         moveData->mIsHoverBurstValid = true;
 
-    Player::TPlayerData *playerData = Player::getData(player);
-
-    if (!BetterSMS::areExploitsPatched()) {
-        moveData->mIsHoverBurstValid = true;
-        playerData->setCanSprayFludd(true);
-    }
-
     if (!moveData->mIsHoverBurstValid)
         return;
+
+    auto *playerData = Player::getData(player);
 
     if ((player->mState & TMario::STATE_WATERBORN) || !playerData->getCanSprayFludd())
         return;
