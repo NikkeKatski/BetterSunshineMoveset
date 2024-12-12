@@ -62,7 +62,12 @@ BETTER_SMS_FOR_CALLBACK bool processWaterPound(TMario *player) {
         return true;
     }
 
-    player->checkWallPlane(player->mTranslation, 80.0f, player->mCollisionXZSize);
+    //player->checkWallPlane(player->mTranslation, 80.0f, player->mCollisionXZSize);
+    using FunctionPointer = void(*)(TMario*, TVec3f, float, float);
+
+    FunctionPointer EcheckWallPlane = reinterpret_cast<FunctionPointer>(0x802555FC);
+
+    EcheckWallPlane(player, player->mTranslation, 80.0f, player->mCollisionXZSize);
 
     if (player->mSubState == 0) {
         if (player->mSubStateTimer++ == 0) {
